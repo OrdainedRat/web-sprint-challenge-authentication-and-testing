@@ -1,7 +1,16 @@
 const router = require('express').Router();
+const db = require('../../data/dbConfig')
+const tokenBuilder = require('./tokenBuilder')
+const Users = require('./auth-model')
+const bcrypt = require("bcryptjs/dist/bcrypt");
+const {
+  checkUserUnique,
+  validateUserAndPass,
+  checkUserExists,
+} = require('./auth-middleware')
 
-router.post('/register', (req, res) => {
-  res.end('implement register, please!');
+router.post('/register', checkUserUnique, async  (req, res, next) => {
+  
   /*
     IMPLEMENT
     You are welcome to build additional middlewares to help with the endpoint's functionality.
@@ -27,10 +36,23 @@ router.post('/register', (req, res) => {
     4- On FAILED registration due to the `username` being taken,
       the response body should include a string exactly as follows: "username taken".
   */
+ const { username, password} = req.body
+ const hash = bcrypt.hashSync(password, 8)
+ const exists = await db('users').where('username', req.body.username).first()
+ if(!username || !password) {
+      res.status(401).json({ message: 'Username and Password required' })
+    } else if(exists) {
+        res.status(401).json({ message: 'username is taken' })
+    } else {
+      Users.createUser({ username, password: hash })
+        .then(newUser => {
+            res.status(201).json(newUser)
+        })
+    }
 });
 
-router.post('/login', (req, res) => {
-  res.end('implement login, please!');
+router.post('/login', checkUserExists, async (req, res, next) => {
+  
   /*
     IMPLEMENT
     You are welcome to build additional middlewares to help with the endpoint's functionality.
@@ -54,6 +76,44 @@ router.post('/login', (req, res) => {
     4- On FAILED login due to `username` not existing in the db, or `password` being incorrect,
       the response body should include a string exactly as follows: "invalid credentials".
   */
+      const { username, password } = req.body
+      Users.findBy({ username })
+        .then(user => {
+          if(user && bcrypt.compareSync(password, user.password)) {
+            const token =  tokenBuilder(user)
+            res.status(200).json({
+              message: `welcome, ${username}`,
+              token: token
+            })
+          } else {
+            res.status(400).json({ message: 'invalid credentials' })
+          }
+        })
+        .catch(err => {
+          next(err)
+        })
+
 });
 
 module.exports = router;
+
+//Auth Middleware
+
+
+// const validateUserAndPass = (req, res, next) => {
+//   const { username, password } = req.body
+//   if(!username || !password) {
+//       res.status(401).json({ message: 'Username AND Password are required' })
+//   } else {
+//       next()
+//   }
+// }
+
+// const checkUserUnique = async (req, res, next) => {
+//   const exists = await db('users').where('username', req.body.username).first()
+//   if(exists) {
+//       res.status(400).json({ message: 'username is taken' })
+//   } else {
+//       next()
+//   }
+// }
