@@ -1,4 +1,4 @@
-const JWT_SECRET = require('../secrets/index')
+const{ JWT_SECRET } = require('../secrets/index')
 const jwt = require('jsonwebtoken')
 module.exports = (req, res, next) => {
   /*
@@ -18,9 +18,13 @@ module.exports = (req, res, next) => {
   } else {
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
       if(err) {
-        res.status(401).json({ message: '"token invalid"' })
+        console.log(err)
+        res.status(401).json({ 
+          message: 'token invalid',
+          error: err 
+    })
       } else {
-        req.decodedToke = decoded
+        req.decodedToken = decoded
         next()
       }
     })

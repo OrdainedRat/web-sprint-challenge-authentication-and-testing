@@ -5,11 +5,11 @@ const Users = require('./auth-model')
 const bcrypt = require("bcryptjs/dist/bcrypt");
 const {
   checkUserUnique,
-  validateUserAndPass,
   checkUserExists,
+  validateUserAndPass
 } = require('./auth-middleware')
 
-router.post('/register', checkUserUnique, async  (req, res, next) => {
+router.post('/register', validateUserAndPass, checkUserUnique, async  (req, res, next) => {
   
   /*
     IMPLEMENT
@@ -38,20 +38,17 @@ router.post('/register', checkUserUnique, async  (req, res, next) => {
   */
  const { username, password} = req.body
  const hash = bcrypt.hashSync(password, 8)
- const exists = await db('users').where('username', req.body.username).first()
- if(!username || !password) {
-      res.status(401).json({ message: 'Username and Password required' })
-    } else if(exists) {
-        res.status(401).json({ message: 'username is taken' })
-    } else {
       Users.createUser({ username, password: hash })
         .then(newUser => {
-            res.status(201).json(newUser)
+          res.status(201).json(newUser)
         })
-    }
+        .catch(err => {
+          next(err)
+        })
+    
 });
 
-router.post('/login', checkUserExists, async (req, res, next) => {
+router.post('/login', validateUserAndPass, checkUserExists, async (req, res, next) => {
   
   /*
     IMPLEMENT
